@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM Recherche Emploi — Rennes</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; min-height: 100vh; }
+  header { background: #fff; border-bottom: 1px solid #e5e5e5; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 16px; font-weight: 500; }
+  header span { font-size: 12px; color: #888; }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 1.25rem 1.5rem 0; }
+  .stat { background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 0.85rem; text-align: center; }
+  .stat-num { font-size: 24px; font-weight: 500; }
+  .stat-label { font-size: 11px; color: #888; margin-top: 2px; }
+  .board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 1.25rem 1.5rem; }
+  .col { background: #ebebeb; border-radius: 12px; padding: 10px; min-height: 200px; }
+  .col-header { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #666; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .col-count { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 1px 7px; font-size: 11px; color: #666; }
+  .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+  .card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #e8f0fb; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: #2563eb; flex-shrink: 0; }
+  .card-name { font-size: 13px; font-weight: 500; }
+  .badge { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-top: 2px; }
+  .badge-open { background: #dcfce7; color: #166534; }
+  .badge-check { background: #fef9c3; color: #854d0e; }
+  .card-sector { font-size: 11px; color: #666; line-height: 1.4; margin-bottom: 8px; }
+  .card-actions { display: flex; gap: 5px; flex-wrap: wrap; }
+  .btn { font-size: 10px; padding: 4px 8px; border-radius: 5px; cursor: pointer; border: 1px solid #ddd; background: #fff; color: #444; }
+  .btn:hover { background: #f5f5f5; }
+  .btn-blue { border-color: #bfdbfe; color: #1d4ed8; }
+  .btn-blue:hover { background: #eff6ff; }
+  .col-todo .col-header { color: #1d4ed8; }
+  .col-contacted .col-header { color: #b45309; }
+  .col-followup .col-header { color: #166534; }
+  .col-interview .col-header { color: #6d28d9; }
+  .col-offer .col-header { color: #b91c1c; }
+  .modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 100; display: flex; align-items: center; justify-content: center; }
+  .modal { background: #fff; border-radius: 14px; border: 1px solid #e5e5e5; padding: 1.5rem; max-width: 520px; width: 90%; max-height: 80vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+  .modal-title { font-size: 16px; font-weight: 500; }
+  .modal-sector { font-size: 13px; color: #666; margin-top: 2px; }
+  .btn-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #999; line-height: 1; padding: 0; }
+  .modal-label { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin: 1rem 0 6px; }
+  .modal-contact { font-size: 13px; color: #444; margin-bottom: 4px; }
+  .modal-linkedin { font-size: 12px; color: #2563eb; text-decoration: none; }
+  .modal-msg { font-size: 13px; color: #333; line-height: 1.65; background: #f9f9f7; border-radius: 8px; padding: 1rem; white-space: pre-line; border: 1px solid #eee; margin-top: 6px; }
+  .btn-copy { margin-top: 10px; font-size: 12px; padding: 7px 16px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #333; cursor: pointer; }
+  .btn-copy:hover { background: #f5f5f5; }
+  .status-bar { display: flex; align-items: center; gap: 8px; margin-top: 0.75rem; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .status-label { font-size: 12px; color: #666; }
+  .select-status { font-size: 12px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 6px; background: #fff; color: #333; cursor: pointer; margin-left: auto; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>CRM Recherche Emploi — Rennes</h1>
+  <span id="last-update"></span>
+</header>
+
+<div class="stats" id="stats"></div>
+<div class="board" id="board"></div>
+<div id="modal-container"></div>
+
+<script>
+const COLS = [
+  { id: 'todo', label: 'À contacter', cls: 'col-todo', color: '#1d4ed8', dot: '#93c5fd' },
+  { id: 'contacted', label: 'Contacté', cls: 'col-contacted', color: '#b45309', dot: '#fcd34d' },
+  { id: 'followup', label: 'Relance', cls: 'col-followup', color: '#166534', dot: '#86efac' },
+  { id: 'interview', label: 'Entretien', cls: 'col-interview', color: '#6d28d9', dot: '#c4b5fd' },
+  { id: 'offer', label: 'Offre', cls: 'col-offer', color: '#b91c1c', dot: '#fca5a5' },
+];
+
+const companies = [
+  { name: 'Steeple', sector: 'SaaS comm. interne — PME/ETI', ae: true, contact: 'Jean-Baptiste de Bel-Air', linkedin: 'https://www.linkedin.com/in/jean-baptiste-de-bel-air/', msg: `Bonjour Jean-Baptiste,\n\nJe viens de m'installer à Rennes après 10 ans dans la vente SaaS B2B à Paris. J'essaie de comprendre l'écosystème commercial rennais avant de me lancer sérieusement dans ma recherche.\n\nSteeple m'a tapé dans l'œil — l'idée de grandir sans investisseurs et de garder le cap sur la culture, c'est rare. Et le fait que vous vendiez aux DRH d'entreprises non-connectées, c'est un cycle de vente que je trouve vraiment intéressant.\n\nEst-ce que vous seriez dispo 20-30 min pour un café ou un call ? Juste pour qu'on échange sur comment le marché se structure ici.\n\nBonne journée,` },
+  { name: 'Hellowork', sector: 'Plateforme RH SaaS — ATS & marque employeur', ae: true, contact: 'François Leverger', linkedin: 'https://www.linkedin.com/company/helloworkcom', msg: `Bonjour,\n\nJe débarque à Rennes après une décennie de vente tech à Paris et je cherche à rencontrer les responsables commerciaux de la place avant de lancer ma recherche.\n\nHellowork est clairement un acteur structurant de l'écosystème ici — 600 personnes, une vraie empreinte locale, et un produit RH pertinent dans un marché de l'emploi qui se complexifie.\n\nEst-ce qu'on pourrait échanger 20-30 min ? Pas de candidature déguisée, juste une vraie conversation sur comment les équipes sales fonctionnent ici.\n\nBelle journée,` },
+  { name: 'BlueKanGo', sector: 'SaaS QHSE/RSE — qualité & sécurité', ae: false, contact: 'Tony Courtel', linkedin: 'https://www.linkedin.com/in/tony-courtel/', msg: `Bonjour Tony,\n\nJe me permets de vous contacter car je viens de m'installer à Rennes après 10 ans de vente B2B en SaaS à Paris.\n\nBlueKanGo m'a intrigué — 20 ans d'existence, 3500 clients, une ambition internationale et un ancrage breton fort. C'est un profil d'entreprise assez rare : solide, discret, et clairement efficace.\n\n30 minutes pour un café ou un call ? J'aimerais comprendre comment votre équipe commerciale est structurée.\n\nBonne journée,` },
+  { name: 'PYSAE', sector: 'SaaS transport public — Keolis, Transdev', ae: true, contact: 'Maxime Cabanel', linkedin: 'https://www.linkedin.com/in/maxime-cabanel/', msg: `Bonjour Maxime,\n\nJe viens de m'installer à Rennes après 10 ans dans des boîtes tech parisiennes.\n\nPysae m'a vraiment surpris — vendre du SaaS à des opérateurs de transport publics, c'est un cycle long, institutionnel, avec des enjeux qui dépassent le simple deal.\n\nEst-ce que vous seriez partant pour 30 minutes d'échange ?\n\nBonne journée,` },
+  { name: 'Ubiflow', sector: 'SaaS marketing digital — immo & auto', ae: false, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/ubiflow', msg: `Bonjour,\n\nJe m'installe à Rennes après 10 ans de vente SaaS B2B à Paris.\n\nUbiflow m'a attiré l'attention — 20 ans d'expérience, 40 000 clients dans l'immobilier et l'auto. Ce genre de boîte mature qui reste agile, c'est souvent là où les équipes sales sont les plus intéressantes.\n\nUn café ou 20-30 min de call ?\n\nBelle journée,` },
+  { name: 'Leocare', sector: 'Insurtech — assurance digitale B2C/B2B', ae: true, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/leocare', msg: `Bonjour,\n\nJe viens d'arriver à Rennes après 10 ans dans la vente tech à Paris.\n\nLeocare m'intéresse : réinventer l'assurance avec une stack digitale et aller chercher les courtiers en B2B, c'est un positionnement courageux dans un secteur très conservateur.\n\nEst-ce qu'on pourrait échanger 20-30 min ?\n\nBonne journée,` },
+  { name: 'Anozr Way', sector: 'SaaS cybersécurité — risque humain', ae: false, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/anozr-way', msg: `Bonjour,\n\nJe débarque à Rennes après 10 ans de vente tech parisienne.\n\nAnozr Way m'a vraiment accroché — vendre de la cyber à travers le prisme du risque humain, c'est un angle que peu d'éditeurs ont.\n\nUn call de 20-30 min pour échanger ?\n\nBelle journée,` },
+  { name: 'GLIMPS', sector: 'SaaS cybersécurité — IA détection menaces', ae: false, contact: 'Timothée Billet', linkedin: 'https://www.linkedin.com/in/timothee-billet-b993a88a/', msg: `Bonjour Timothée,\n\nJe viens de m'installer à Rennes après une dizaine d'années dans la vente SaaS à Paris.\n\nGLIMPS m'a clairement intéressé — l'IA appliquée à la détection de menaces sur les fichiers et maintenant sur l'email M365, c'est un angle très technique à vendre.\n\nEst-ce que vous seriez dispo pour un café ou 30 min de call ?\n\nBonne journée,` },
+  { name: 'Famileo', sector: 'SaaS social — lien familles/EHPAD', ae: false, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/famileo', msg: `Bonjour,\n\nJe m'installe à Rennes après 10 ans de vente tech à Paris.\n\nFamileo m'a touché différemment des autres boîtes tech — vendre un lien entre des familles et leurs proches en EHPAD, c'est un produit avec un sens que beaucoup de SaaS n'ont pas.\n\nUn café ou un call de 20 min ?\n\nBelle journée,` },
+  { name: 'Maestro', sector: 'SaaS IA — productivité équipes sales', ae: false, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/maestro-rennes', msg: `Bonjour,\n\nJe débarque à Rennes après 10 ans de vente tech parisienne.\n\nJ'ai vu que Maestro est une des boîtes qui a vraiment embarqué l'IA dans ses process sales et produit — c'est exactement le type de sujet sur lequel je cherche à progresser.\n\n30 minutes pour un échange ?\n\nBonne journée,` },
+  { name: 'IDnow', sector: 'SaaS identité — KYC & onboarding digital', ae: false, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/idnow', msg: `Bonjour,\n\nJe viens de m'installer à Rennes après 10 ans dans la vente SaaS B2B à Paris.\n\nIDnow m'a tapé dans l'œil — la vérification d'identité digitale avec la pression KYC réglementaire, vendre à des banques et assureurs avec ce niveau d'exigence compliance, ça doit être des deals costauds.\n\nUn café ou un call de 30 min ?\n\nBelle journée,` },
+  { name: 'Cailabs', sector: 'Deeptech photonique — spatial & télécoms', ae: false, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/cailabs', msg: `Bonjour,\n\nJe m'installe à Rennes après 10 ans de vente tech à Paris.\n\nCailabs m'a fasciné — vendre des solutions photoniques à des acteurs de l'industrie spatiale et des télécoms, c'est probablement un des cycles de vente les plus complexes qui existent.\n\nUn café ou 30 min de call ?\n\nBonne journée,` },
+  { name: 'Unseenlabs', sector: 'Deeptech spatial — surveillance maritime', ae: false, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/unseenlabs', msg: `Bonjour,\n\nJe viens d'arriver à Rennes après une décennie de vente tech parisienne.\n\nUnseenlabs m'a scotché — surveiller l'activité maritime depuis l'espace par spectre radio, avec une clientèle défense et gouvernements. Je suis curieux de comprendre comment on structure une force de vente sur ce type de marché.\n\n30 minutes pour un échange ?\n\nBelle journée,` },
+  { name: 'Gladia', sector: 'SaaS IA — transcription audio/vidéo temps réel', ae: false, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/gladia-io', msg: `Bonjour,\n\nJe débarque à Rennes après 10 ans de vente SaaS à Paris.\n\nGladia m'a accroché — vendre une API de transcription audio/vidéo en temps réel à des développeurs, c'est un type de vente très différent du SaaS classique.\n\nUn call de 20-30 min ?\n\nBelle journée,` },
+  { name: 'WaryMe', sector: 'SaaS sécurité des personnes — mobile', ae: false, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/waryme', msg: `Bonjour,\n\nJe m'installe à Rennes après 10 ans dans la vente tech à Paris.\n\nWaryMe m'a intéressé — la sécurité des personnes au travail via le mobile, vendre ça à des DRH et directeurs de sécurité, c'est une conversation assez particulière.\n\nUn café ou 20 min de call ?\n\nBelle journée,` },
+  { name: 'Aghadoe', sector: 'SaaS marketing local — réseaux points de vente', ae: false, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/aghadoe', msg: `Bonjour,\n\nJe viens de m'installer à Rennes après 10 ans de vente SaaS B2B à Paris.\n\nAghadoe m'a intrigué — une plateforme marketing multi-modules pour des réseaux de points de vente, avec des partenariats Google et Meta Premier.\n\nUn café ou 30 min de call ?\n\nBelle journée,` },
+  { name: 'Solantis', sector: 'SaaS / conseil IT — commercial régional B2B', ae: true, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/solantis', msg: `Bonjour,\n\nJe viens d'arriver à Rennes après 10 ans de vente tech à Paris.\n\nSolantis m'a attiré l'attention — conseil IT et solutions logicielles régionales avec une vraie présence terrain en Bretagne.\n\n20-30 min de call pour qu'on échange ?\n\nBelle journée,` },
+  { name: 'Mediaveille', sector: 'SaaS pub locale — multi-supports régionaux', ae: false, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/mediaveille', msg: `Bonjour,\n\nJe débarque à Rennes après 10 ans dans la vente tech parisienne.\n\nMediaveille m'a interpellé — la publicité locale multi-supports pour des annonceurs régionaux, très relationnel, très ancré dans le tissu local. Et à Rennes avec le tissu de PME bretonnes, j'imagine que c'est un vrai atout.\n\nUn café ou 20 min ?\n\nBelle journée,` },
+  { name: 'Askr.AI', sector: 'SaaS IA — Q&A sur bases documentaires', ae: false, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/askr-ai', msg: `Bonjour,\n\nJe m'installe à Rennes après 10 ans de vente SaaS B2B à Paris.\n\nAskr.AI m'a intéressé — rendre les bases documentaires d'entreprise interrogeables par IA, c'est un use case concret dans un marché encore très flou.\n\n30 min de call pour échanger ?\n\nBelle journée,` },
+  { name: 'Klaxoon', sector: 'SaaS collaboration — post-exit 2025', ae: false, contact: 'À identifier', linkedin: 'https://fr.linkedin.com/company/klaxoon', msg: `Bonjour,\n\nJe viens de m'installer à Rennes après 10 ans de vente tech à Paris.\n\nKlaxoon a été une des plus belles success stories rennaises — et le rachat en 2025 dit quelque chose sur la valeur que vous avez créée.\n\nEst-ce que vous seriez dispo pour échanger 20-30 min ?\n\nBelle journée,` },
+];
+
+const STORAGE_KEY = 'crm_rennes_state';
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  const s = {};
+  companies.forEach(c => { s[c.name] = 'todo'; });
+  return s;
+}
+
+function saveState(s) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch(e) {}
+  document.getElementById('last-update').textContent = 'Sauvegardé ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+}
+
+let state = loadState();
+
+function getInitials(name) {
+  return name.split(/[\s-]/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function renderStats() {
+  const el = document.getElementById('stats');
+  el.innerHTML = COLS.map(col => {
+    const n = companies.filter(c => state[c.name] === col.id).length;
+    return `<div class="stat"><div class="stat-num" style="color:${col.color}">${n}</div><div class="stat-label">${col.label}</div></div>`;
+  }).join('');
+}
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = COLS.map(col => {
+    const cards = companies.filter(c => state[c.name] === col.id);
+    return `
+      <div class="col ${col.cls}">
+        <div class="col-header">
+          <span>${col.label}</span>
+          <span class="col-count">${cards.length}</span>
+        </div>
+        ${cards.map(c => renderCard(c)).join('')}
+      </div>
+    `;
+  }).join('');
+
+  document.querySelectorAll('.btn-move').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const name = btn.dataset.name;
+      const dir = btn.dataset.dir;
+      const ids = COLS.map(c => c.id);
+      const idx = ids.indexOf(state[name]);
+      if (dir === 'next' && idx < ids.length - 1) state[name] = ids[idx + 1];
+      if (dir === 'prev' && idx > 0) state[name] = ids[idx - 1];
+      saveState(state);
+      renderAll();
+    });
+  });
+
+  document.querySelectorAll('.btn-msg').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      openModal(companies.find(c => c.name === btn.dataset.name));
+    });
+  });
+}
+
+function renderCard(c) {
+  const ids = COLS.map(col => col.id);
+  const idx = ids.indexOf(state[c.name]);
+  const hasPrev = idx > 0;
+  const hasNext = idx < ids.length - 1;
+  return `
+    <div class="card">
+      <div class="card-top">
+        <div class="avatar">${getInitials(c.name)}</div>
+        <div>
+          <div class="card-name">${c.name}</div>
+          <span class="badge ${c.ae ? 'badge-open' : 'badge-check'}">${c.ae ? 'Poste ouvert' : 'À vérifier'}</span>
+        </div>
+      </div>
+      <div class="card-sector">${c.sector}</div>
+      <div class="card-actions">
+        ${hasPrev ? `<button class="btn" data-name="${c.name}" data-dir="prev">← Reculer</button>` : ''}
+        ${hasNext ? `<button class="btn" data-name="${c.name}" data-dir="next">Avancer →</button>` : ''}
+        <button class="btn btn-blue btn-msg" data-name="${c.name}">Message</button>
+      </div>
+    </div>
+  `;
+}
+
+function openModal(c) {
+  const container = document.getElementById('modal-container');
+  container.innerHTML = `
+    <div class="modal-bg" id="modal-bg">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <div class="modal-title">${c.name}</div>
+            <div class="modal-sector">${c.sector}</div>
+          </div>
+          <button class="btn-close" id="modal-close">×</button>
+        </div>
+        <div class="modal-label">Contact</div>
+        <div class="modal-contact">${c.contact}</div>
+        <a class="modal-linkedin" href="${c.linkedin}" target="_blank">Voir sur LinkedIn →</a>
+        <div class="modal-label">Message LinkedIn</div>
+        <div class="modal-msg">${c.msg}</div>
+        <button class="btn-copy" id="btn-copy">Copier le message</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('modal-close').onclick = closeModal;
+  document.getElementById('modal-bg').onclick = e => { if (e.target.id === 'modal-bg') closeModal(); };
+  document.getElementById('btn-copy').onclick = () => {
+    navigator.clipboard.writeText(c.msg).then(() => {
+      document.getElementById('btn-copy').textContent = 'Copié !';
+      setTimeout(() => { document.getElementById('btn-copy').textContent = 'Copier le message'; }, 2000);
+    });
+  };
+}
+
+function closeModal() {
+  document.getElementById('modal-container').innerHTML = '';
+}
+
+function renderAll() { renderStats(); renderBoard(); }
+renderAll();
+</script>
+</body>
+</html>
